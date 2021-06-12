@@ -4,6 +4,8 @@
 
 This shell script `log4t` permits to log to files every text written to standard output and standard error streams by the execution of a batch or a command-line into a terminal, as well as text sent to the standard input stream.
 
+> `log4t` is written in kornshell (compatible with `ksh` and `ksh93`). Don't hesitate to port it to `bash` if you know about bash coprocesses (and let me know !).
+
 For instance, you can log the result of the command `ls README.md toto` with:
 
 ```
