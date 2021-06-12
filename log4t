@@ -31,7 +31,7 @@ Name:
    $nomexe - executes a command and duplicates its terminal outputs to log files
 
 Usage:
-   $nomexe [-ahnrl] [{-|+}IOE] [-o filename] command
+   $nomexe [-ahnrl] [{-|+}IOE] [-o filename] command [arguments...]
 
 Description:
    The $nomexe command makes time-stamped typescripts of everything read from standard input and displayed to standard output and standard error during the execution of "command".
@@ -47,8 +47,8 @@ Description:
    4. The standard error (file descriptor 2) of "command" is:
       - typescripted to the standard log file and the error log file if the standard error is associated with a terminal device or option +E is used.
       - typescripted to standard error if it is associated to a terminal device. Otherwise, the standard error is kept unchanged.
-   8. The return status of the invoked "command" is returned.
-   9. The SIGHUP signals are ignored during execution of "command", allowing the user to logout before the execution ends (same as nohup) when run in background.
+   5. The return status of the invoked "command" is returned.
+   6. The SIGHUP signals are ignored during execution of "command", allowing the user to logout before the execution ends (same as nohup) when run in background.
 
 Options:
    -a               Appends the typescripts to the log and error files.
