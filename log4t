@@ -1,0 +1,468 @@
+#!/usr/bin/ksh -C
+#--------------------------------------------------------------------------------
+#@(#) SCRIPT               : log4t (ksh)
+#--------------------------------------------------------------------------------
+#@(#) Description          : Executes a command and duplicates its terminal outputs to log files
+#@(#) Author               : Laurent FARHI
+#@(#) Input parameters     : The command to be launched
+#@(#) Return status        : Return status of the command launched
+#@(#) Ressources used      : UNIX commands : ksh, date, uname -n
+#------------------------------------------------------------------------------#
+#@(#) Version              : 1.0     LFA     Creation            2005/02/03
+#@(#) Version              : 1.1     LFA     Ported to ksh93     2011/01/30
+#------------------------------------------------------------------------------#
+
+# ---------------------------------------------------------------------------
+# Functions
+function usage
+{
+  retcode = $?
+  OPTIND=0 ; getopts "$optlist" option "-?"
+  exit $retcode
+}
+
+function help
+{
+  while IFS="" read -r ligneh || [[ -n "$ligneh" ]]
+  do
+    print -r -- "$ligneh"
+  done >&$1 <<-EOF
+Name:
+   $nomexe - executes a command and duplicates its terminal outputs to log files
+
+Usage:
+   $nomexe [-ahnrl] [{-|+}IOE] [-o filename] command
+
+Description:
+   The $nomexe command makes time-stamped typescripts of everything read from standard input and displayed to standard output and standard error during the execution of "command".
+   Typescripts are written to two log files, a standard log file (suffixed .log) and an error log file (suffixed .err).
+
+   1. The command "command" is executed. "command" must be executable.
+   2. The standard output (file descriptor 1) of "command" is:
+      - typescripted to the standard log file if the standard output is associated with a terminal device or option +O is used.
+      - typescripted to the standard output if it is associated to a terminal device. Otherwise, the standard output is kept unchanged.
+   3. The standard input (file descriptor 0) of "command" is:
+      - typescripted to the standard log file if the standard input is associated with a terminal device or option +I is used.
+      - typescripted to the standard error if the standard error is associated to a terminal device.
+   4. The standard error (file descriptor 2) of "command" is:
+      - typescripted to the standard log file and the error log file if the standard error is associated with a terminal device or option +E is used.
+      - typescripted to standard error if it is associated to a terminal device. Otherwise, the standard error is kept unchanged.
+   8. The return status of the invoked "command" is returned.
+   9. The SIGHUP signals are ignored during execution of "command", allowing the user to logout before the execution ends (same as nohup) when run in background.
+
+Options:
+   -a               Appends the typescripts to the log and error files.
+   -r               Log and error files are overwritten.
+   -o filename      If "filename" is an existing directory, specifies the directory where log files are written into.
+                    Otherwise, specifies the basename for log files.
+   -n               No log and error files are created.
+   -h               Displays this help message.
+   -l (ell)         Typescript written with long format (process id and line numbering).
+   {-|+}I           Desactivate/activate logging for standard input.
+                    -I is needed if $nomexe is run as a background process (to avoid signal TTIN).
+   {-|+}O           Desactivate/activate logging for standard output.
+   {-|+}E           Desactivate/activate logging for standard error.
+
+Names of log files:
+   * Log files are written into the current directory, except if options -o is used and specifies an existing directory.
+   * New output log files are created, except if options -a, -r or -n are used.
+   * The basename of log files can be specified with option -o filename. By default, "command" is used as basename.
+   * If options -a or -r are used, filenames are basename.log and basename.err for standard and error log files respectively.
+   * Otherwise, filenames are basename.date.pid.log and basename.date.pid.err for standard and error log files respectively.
+
+Typescripting format:
+   * to terminal : (+S) [L] T message
+   * to log file (short format) : D [L] T message
+   * to log file (long format, option -l) : D (+ss) P [L] T:N message
+     where:
+     - S is the number of elapsed seconds since the beginning of the execution of "command"
+     - L is the basename of log files
+     - T is the type of standard stream typescripted (I for input, O for output, E for error)
+     - D is the current date with format year-month-day hour:minute:second
+     - P is the process id of the process "$nomexe"
+     - N is the line number (one separate numbering for each standard stream)
+
+Return status:
+   * If "command" is invoked, the exit status of $nomexe will be the exit status of "command".
+   * Otherwise, $nomexe will exit with one of the following values:
+      1-125    an error occurred in $nomexe.
+      126      "command" was found but could not be invoked.
+      127      "command" is unspecified, empty or could not be found.
+
+Examples:
+   $nomexe ls
+      invokes the executable $(whence -p ls)
+      standard and error output written to files named (for example) ls.$(date '+%Y%m%d%H%M%S').$pid.log and ls.$(date '+%Y%m%d%H%M%S').$pid.err.
+
+   $nomexe +O -l script.ksh >/dev/null
+      invokes the executable script script.ksh,
+      standard output is not sent to the terminal (> /dev/null) but is logged anyway (+O) with a long format (-l).
+
+   $nomexe -n ksh -c "pwd ; ls -1 | wc -l"
+      the command $(whence -p ksh) is invoked and executed without creating a log file (-n).
+
+   $nomexe -r -o output ksh -c 'sleep 1 ; print 1 ; sleep 1 ; print -u2 2 ; sleep 1 ; return 7' ; print \$?
+      $nomexe return code is the return code (7) of the command launched, ksh in this example.
+
+   $nomexe -Io test ksh -c 'i=0 ; while (( i=i+1 )) ; do sleep 10 ; print \$i ; done' &
+      the user can logout without killing the process launched in the background (&) (note the needed option -I used since).
+
+   $nomexe \$SHELL
+      makes a time-stamped record of a terminal session.
+
+   $nomexe -ro mylog +O cat $nomexe | wc -c ; cat $nomexe | wc -c
+      the command "cat $nomexe" is executed and its standard output is logged (+O) to file mylog.log (-ro wc) while piped unmodified to command wc -l.
+
+   $nomexe can also be used to log scheduled tasks, such as with cron, adding the following to the crontab:
+      28 14 * * * logit +OE ls $HOME aaaaa >/dev/null
+      the command "ls $HOME aaaaa >/dev/null" is executed and logged. Errors are reported by the system ans logged in the error log file.
+EOF
+
+  exit $(( $1 - 1 ))
+}
+
+function tprint
+{   # prepends a string "$label" to any character \r and print to stdout
+  typeset -i seconds=$SECONDS
+  label="(+$seconds) [$libele] $1 "
+  shift
+  imsg="$@"
+
+  print -n -- "$label"
+  while [[ "$imsg" = *$rsep* ]] ; do
+    debut="${imsg%%$rsep*}"
+    print -nr -- "$debut"
+    print -n -- "$sep$label"
+    imsg="${imsg#*$rsep}"
+  done
+  print -r -- "$imsg"
+}
+
+function lprint
+{   # prepends a string "$label" to any character \r and print to stdout
+  (( numligne=$1 ))
+  if (( lflag )) ; then
+    label="$(date '+%Y-%m-%dT%H:%M:%S%z') (+$SECONDS) $pid [$libele] $2:$numligne "
+  else
+    label="$(date '+%Y-%m-%dT%H:%M:%S') [$libele] $2 "
+  fi
+  shift 2
+  imsg="$@"
+
+  print -n -- "$label"
+  while [[ "$imsg" = *$rsep* ]] ; do
+    debut="${imsg%%$rsep*}"
+    print -nr -- "$debut"
+    print -n -- "$sep$label"
+    imsg="${imsg#*$rsep}"
+  done
+  print -r -- "$imsg"
+}
+
+function iprint
+{
+  if [[ $nflag -eq 0 ]] ; then
+    if (( t1 )) ; then
+      tprint L "----- Log file:   $LOGFILE"
+      tprint L "----- Error file: $ERRFILE"
+    fi
+    #lprint $(( nlignes_l=nlignes_l+1 )) L "----- Log file:   $LOGFILE" >> "$LOGFILE"
+    lprint $(( nlignes_l=nlignes_l+1 )) L "----- Error file: $ERRFILE" >> "$LOGFILE"
+  fi
+}
+
+function _exit
+{
+  ret="$?"
+  [[ $# -ge 1 ]] && ret="$1"
+  iprint
+  exit $ret
+}
+
+function _signals
+{
+  v=0
+  [[ "$1" = "-v" ]] && { v=1 ; shift ; }
+  signal="$1"
+  shift
+  cpid="$*"
+  (( v )) && (( t1 )) && tprint L "----- Signal $signal caught"
+  (( v )) && lprint $(( nlignes_l=nlignes_l+1 )) L "----- Signal $signal caught" >> "$LOGFILE"
+  case "$signal" in (INT|QUIT) signal=TERM ;; esac
+  kill -s "$signal" -- $cpid 2>/dev/null
+}
+
+# ---------------------------------------------------------------------------
+# Main:
+# Initialization phase:
+if [[ "$0" = *_d ]] ; then
+  trap 'set +x ; typeset -ft $(typeset +f) ; set -x' DEBUG
+  :
+fi
+set -u
+unset IFS   # IFS reset to default value
+nomexe=${0##*/}
+pid=$$
+: ${PWD:=$(pwd)}    # assigns value "$(pwd)" if PWD is unset.
+nomfichier="$PWD"
+libele=""
+aflag=0
+rflag=0
+nflag=0
+lflag=0
+wflag=0
+fin_i=0
+if [[ -t 0 ]] ; then
+  t0=1
+  fin_i=0
+else
+  t0=0
+  fin_i=1
+fi
+if [[ -t 1 ]] ; then
+  t1=1
+  fin_o=0
+else
+  t1=0
+  fin_o=1
+fi
+if [[ -t 2 ]] ; then
+  t2=1
+  fin_e=0
+else
+  t2=0
+  fin_e=0
+fi
+
+typeset -i numligne
+
+sep="\r"
+print -- "$sep" | read rsep      # converts escape conventions of echo to characters
+
+optlist="+o:arnhlDdIOE"
+while getopts ":$optlist" option
+do
+  case $option in
+  o) nomfichier="$OPTARG" ;;
+  a) aflag=1 ; rflag=0 ; lflag=1 ;;
+  r) rflag=1 ; aflag=0 ;;
+  n) nflag=1 ;;
+  h) help 1;;
+  I) fin_i=1 ;;
+ +I) fin_i=0 ;;
+  O) fin_o=1 ;;
+ +O) fin_o=0 ;;
+  E) fin_e=1 ;;
+ +E) fin_e=0 ;;
+  l) lflag=1 ;;
+  d) set -x ;;
+  D) trap 'typeset -ft $(typeset +f) ; set -x' DEBUG ; : ;;
+  ?) print -u2 "$nomexe: illegal option -- $OPTARG. Type $nomexe -h for help." ; exit 1 ;;
+  esac
+done
+shift $(($OPTIND - 1))
+
+if [[ ${#@} -eq 0 ]] || [[ -z "$*" ]] ; then
+  print -u2 "$nomexe: missing or empty command argument. Type $nomexe -h for help."
+  exit 127
+else
+  cmd="$@"
+  if ! whence -p "${cmd%% *}" >&- ; then
+    print -u2 "$nomexe: unknown command ${cmd%% *}. Type $nomexe -h for help."
+    exit 127
+  fi
+fi
+libele="${1##*/}"
+if [[ -d "$nomfichier" ]] ; then
+  nomfichier="$nomfichier/${1##*/}"
+else
+  libele="${nomfichier##*/}"
+fi
+if [[ $aflag -eq 0 ]] && [[ $rflag -eq 0 ]] ; then
+  nomfichier="$nomfichier.$(date '+%Y%m%dT%H%M%S').$pid"
+fi
+if [[ $nflag -eq 0 ]] ; then
+  LOGFILE="$nomfichier.log"
+  ERRFILE="$nomfichier.err"
+else
+  LOGFILE=/dev/null
+  ERRFILE=/dev/null
+fi
+if [[ $aflag -ne 0 ]] ; then
+  >> "$LOGFILE" || exit   # ">>" same as "touch", but internal ksh command, does not fork a subprocess.
+  >> "$ERRFILE" || exit
+elif [[ $rflag -ne 0 ]] ; then
+  >| "$LOGFILE" || exit
+  >| "$ERRFILE" || exit
+#else
+#  > "$LOGFILE" || exit
+#  > "$ERRFILE" || exit
+fi
+
+trap "" HUP
+HOST=$(uname -n)
+
+# Standard input redirected to stream 4
+exec 4<&0
+
+if (( fin_i )) ; then
+  rediri="<&4"
+else
+  rediri=
+fi
+if (( fin_o )) ; then
+  rediro=">&5"
+  exec 5>&1
+else
+  rediro=
+fi
+if (( fin_e )) ; then
+  redire="2>&6"
+  exec 6>&2
+else
+  redire=
+fi
+
+# Processing phase:
+(( nlignes_l=0 ))  # better than 'let "nlignes_l=0"' since does return 1 as well but does not stop execution when ksh option -e is used.
+
+(( t1 )) && tprint L "----- START execution of '$cmd' (process $pid submitted by $LOGNAME@$HOST:$PWD)"
+lprint $(( nlignes_l=nlignes_l+1 )) L "----- START execution of '$cmd' (process $pid submitted by $LOGNAME@$HOST:$PWD)" >> "$LOGFILE"
+
+iprint
+
+(( fin_i )) && lprint $(( nlignes_l=nlignes_l+1 )) L "----- Standard input not logged" >> "$LOGFILE"
+(( fin_o )) && lprint $(( nlignes_l=nlignes_l+1 )) L "----- Standard output not logged" >> "$LOGFILE"
+(( fin_e )) && lprint $(( nlignes_l=nlignes_l+1 )) L "----- Standard error not logged" >> "$LOGFILE"
+
+SECONDS=0
+
+(
+  eval '(
+    exec "$@" &
+    cpida=$!
+    for signal in INT QUIT PIPE TERM ; do
+      trap "_signals $signal $cpida" $signal
+    done
+    wait $cpida
+    retcode0=$?
+    return $retcode0
+  ) 3>&1 1>&2 2>&3' "$rediri $rediro $redire |&"  # inner co-process
+# '3>&1 1>&2 2>&3' to swap standard output (1) and standard error (2).
+
+  cpidb=$!
+
+  exec 7>&p 8<&p
+
+  if ! (( fin_e )) ; then
+   (( nlignes_e=0 ))
+   while ! (( fin_e )) ; do
+    IFS="" read -r ligne_e   #   read ... <&p better than read -p ... since it is killed when the spawn coprocess ends (see note 1 below).
+    fin_e=$?
+    if ! (( fin_e )) || [[ -n "$ligne_e" ]] ; then
+
+      if (( t2 )) ; then
+        tprint E "$ligne_e"
+      elif ! (( fin_e )) ; then
+        print -r -- "$ligne_e"
+      else
+        print -rn -- "$ligne_e"
+      fi
+
+      (( nlignes_e )) || lprint 1 L "----- START execution of '$cmd' (process $pid submitted by $LOGNAME@$HOST:$PWD)" >> "$ERRFILE"
+      (( nlignes_e=nlignes_e+1 ))
+      message="$(lprint $(( nlignes_e )) E "$ligne_e")"
+      print -r -- "$message" >> "$ERRFILE"
+      print -r -- "$message" >> "$LOGFILE"
+
+    fi
+   done
+  fi <&8 &
+
+  if ! (( fin_i )) ; then
+   (( nlignes_i=0 ))
+   while ! (( fin_i )) ; do
+    IFS="" read -r ligne_i
+    fin_i=$?
+    if ! (( fin_i )) || [[ -n "$ligne_i" ]] ; then
+
+      if (( t2 )) ; then
+        tprint I "$ligne_i"
+      fi
+      if ! (( fin_i )) ; then
+        print -ru7 -- "$ligne_i"
+      else
+        print -rnu7 -- "$ligne_i"
+      fi
+
+      (( nlignes_i=nlignes_i+1 ))
+      lprint $(( nlignes_i )) I "$ligne_i" >> "$LOGFILE"
+
+    fi
+   done <&4
+   exec 7>&-  # close the input stream of the co-process
+  fi &
+  cpidi=$!
+
+  for signal in INT QUIT TERM ; do
+    trap "_signals $signal $cpidb" $signal
+  done
+
+  wait $cpidb
+  retcode1=$?
+  kill $cpidi 2>&-
+  return $retcode1
+) 3>&1 1>&2 2>&3 |&  # outer co-process
+# '3>&1 1>&2 2>&3' to swap standard output (1) and standard error (2).
+
+cpidc=$!
+
+exec 7>&p 8<&p
+exec 7>&-
+
+for signal in INT QUIT TERM ; do
+  trap "_signals -v $signal $cpidc" $signal
+done
+
+if ! (( fin_o )) ; then
+ (( nlignes_o=0 ))
+ while ! (( fin_o )) ; do
+  IFS="" read -r ligne_o
+  fin_o=$?
+  if ! (( fin_o )) || [[ -n "$ligne_o" ]] ; then
+# test -n to read the last line even if not terminated with end-of-line
+
+    if (( t1 )) ; then
+      tprint O "$ligne_o"
+    elif ! (( fin_o )) ; then
+      print -r -- "$ligne_o"
+    else
+      print -rn -- "$ligne_o"
+    fi
+
+    (( nlignes_o=nlignes_o+1 ))
+    lprint $(( nlignes_o )) O "$ligne_o" >> "$LOGFILE"
+
+  fi
+ done
+fi <&8 &
+
+wait $cpidc
+retcode2=$?
+if (( retcode2 )) ; then
+  message="----- FATAL ERROR (return code $retcode2)"
+  lprint $(( nlignes_l=nlignes_l+1 )) L "$message" >> "$LOGFILE"
+  [[ -f "$ERRFILE" ]] && lprint $(( nlignes_l )) L "$message" >> "$ERRFILE"
+  (( t1 )) && tprint L "$message"
+fi
+message="----- END execution of '$cmd' after $SECONDS seconds (return code $retcode2)"
+lprint $(( nlignes_l=nlignes_l+1 )) L "$message" >> "$LOGFILE"
+[[ -f "$ERRFILE" ]] && lprint $(( nlignes_l )) L "$message" >> "$ERRFILE"
+(( t1 )) && tprint L "$message"
+
+_exit $retcode2
+
+: << "EOF"
+(1) read -p does not close the co-process descriptor after completion, whereas read ... <&p does as a builtin function.
+    Nevertheless, the unix command read ... <&p (not builtin but separate excutable) does not close the descriptor !
+EOF
