@@ -1,2 +1,2 @@
-# lot4t
+# log4t
 Log tool for command-line terminal and batch
