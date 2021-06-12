@@ -3,7 +3,7 @@
 #@(#) SCRIPT               : log4t (ksh)
 #--------------------------------------------------------------------------------
 #@(#) Description          : Executes a command and duplicates its terminal outputs to log files
-#@(#) Author               : Laurent FARHI
+#@(#) Author               : Laurent FARHI (copyright 2021)
 #@(#) Input parameters     : The command to be launched
 #@(#) Return status        : Return status of the command launched
 #@(#) Ressources used      : UNIX commands : ksh, date, uname -n
@@ -11,7 +11,7 @@
 #@(#) Version              : 1.0     LFA     Creation            2005/02/03
 #@(#) Version              : 1.1     LFA     Ported to ksh93     2011/01/30
 #------------------------------------------------------------------------------#
-
+# This program comes with ABSOLUTELY NO WARRANTY.
 # ---------------------------------------------------------------------------
 # Functions
 function usage
