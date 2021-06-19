@@ -98,6 +98,9 @@ Examples:
       invokes the executable script script.ksh,
       standard output is not sent to the terminal (> /dev/null) but is logged anyway (+O) with a long format (-l).
 
+   $PWD/$nomexe +OE ls $nomexe not_a_file >/dev/null 2>&1
+      invokes the executable 'ls', standard output and error are not sent to the terminal (> /dev/null 2>&1) but are logged to files (+OE).
+
    $nomexe -n ksh -c "pwd ; ls -1 | wc -l"
       the command $(whence -p ksh) is invoked and executed without creating a log file (-n).
 
@@ -105,7 +108,7 @@ Examples:
       $nomexe return code is the return code (7) of the command launched, ksh in this example.
 
    $nomexe -Io test ksh -c 'i=0 ; while (( i=i+1 )) ; do sleep 10 ; print \$i ; done' &
-      the user can logout without killing the process launched in the background (&) (note the needed option -I used since).
+      the user can logout without killing the process launched in the background (&) (note the needed option -I used to avoid SIGHUP).
 
    $nomexe \$SHELL
       makes a time-stamped record of a terminal session.
@@ -114,8 +117,8 @@ Examples:
       the command "cat $nomexe" is executed and its standard output is logged (+O) to file mylog.log (-ro wc) while piped unmodified to command wc -l.
 
    $nomexe can also be used to log scheduled tasks, such as with cron, adding the following to the crontab:
-      28 14 * * * logit +OE ls $HOME aaaaa >/dev/null
-      the command "ls $HOME aaaaa >/dev/null" is executed and logged. Errors are reported by the system ans logged in the error log file.
+      28 14 * * * $PWD/$nomexe +OE ls $HOME aaaaa >/dev/null
+      the command "ls $HOME aaaaa >/dev/null" is executed and logged. Errors are reported by the system and logged in the error log file.
 EOF
 
   exit $(( $1 - 1 ))
