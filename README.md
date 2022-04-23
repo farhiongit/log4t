@@ -10,15 +10,15 @@ For instance, you can log the result of the command `ls README.md toto` with:
 
 ```
 > ./log4t ls README.md toto
-(+0) [ls] L ----- START execution of 'ls README.md toto' (process 6437 submitted by laurent@amedea6:/home/laurent/Informatique/Ksh/Sources/log4t)
-(+0) [ls] L ----- Log file:   /home/laurent/Informatique/Ksh/Sources/log4t/ls.20210612T210810.6437.log
-(+0) [ls] L ----- Error file: /home/laurent/Informatique/Ksh/Sources/log4t/ls.20210612T210810.6437.err
+(+0) [ls] L ----- START execution of 'ls README.md toto' (process 6437 submitted by laurent@amedea6:***)
+(+0) [ls] L ----- Log file:   ls.20210612T210810.6437.log
+(+0) [ls] L ----- Error file: ls.20210612T210810.6437.err
 (+0) [ls] E ls: cannot access 'toto': No such file or directory
 (+0) [ls] O README.md
 (+0) [ls] L ----- FATAL ERROR (return code 2)
 (+0) [ls] L ----- END execution of 'ls README.md toto' after 0.014 seconds (return code 2)
-(+0) [ls] L ----- Log file:   /home/laurent/Informatique/Ksh/Sources/log4t/ls.20210612T210810.6437.log
-(+0) [ls] L ----- Error file: /home/laurent/Informatique/Ksh/Sources/log4t/ls.20210612T210810.6437.err
+(+0) [ls] L ----- Log file:   ls.20210612T210810.6437.log
+(+0) [ls] L ----- Error file: ls.20210612T210810.6437.err
 ```
 
 Traces of execution are logged in a default log file.
@@ -26,18 +26,18 @@ Errors are sent a separate log file.
 
 ```
 > cat ls.20210612T210810.6437.log
-2021-06-12T21:08:10 [ls] L ----- START execution of 'ls README.md toto' (process 6437 submitted by laurent@amedea6:/home/laurent/Informatique/Ksh/Sources/log4t)
-2021-06-12T21:08:10 [ls] L ----- Error file: /home/laurent/Informatique/Ksh/Sources/log4t/ls.20210612T210810.6437.err
+2021-06-12T21:08:10 [ls] L ----- START execution of 'ls README.md toto' (process 6437 submitted by laurent@amedea6:***)
+2021-06-12T21:08:10 [ls] L ----- Error file: ls.20210612T210810.6437.err
 2021-06-12T21:08:10 [ls] O README.md
 2021-06-12T21:08:10 [ls] L ----- FATAL ERROR (return code 2)
 2021-06-12T21:08:10 [ls] E ls: cannot access 'toto': No such file or directory
 2021-06-12T21:08:10 [ls] L ----- END execution of 'ls README.md toto' after 0.014 seconds (return code 2)
-2021-06-12T21:08:10 [ls] L ----- Error file: /home/laurent/Informatique/Ksh/Sources/log4t/ls.20210612T210810.6437.err
+2021-06-12T21:08:10 [ls] L ----- Error file: ls.20210612T210810.6437.err
 ```
 
 ```
 > cat ls.20210612T210810.6437.err
-2021-06-12T21:08:10 [ls] L ----- START execution of 'ls README.md toto' (process 6437 submitted by laurent@amedea6:/home/laurent/Informatique/Ksh/Sources/log4t)
+2021-06-12T21:08:10 [ls] L ----- START execution of 'ls README.md toto' (process 6437 submitted by laurent@amedea6:***)
 2021-06-12T21:08:10 [ls] E ls: cannot access 'toto': No such file or directory
 2021-06-12T21:08:10 [ls] L ----- FATAL ERROR (return code 2)
 2021-06-12T21:08:10 [ls] L ----- END execution of 'ls README.md toto' after 0.014 seconds (return code 2)
